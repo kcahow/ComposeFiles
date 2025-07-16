@@ -1,0 +1,42 @@
+# To run this service detached with a project name use: docker-compose -p <project_name> up -d
+services:
+  postgres:
+    image: postgres:latest
+    container_name: ksbns_postgres
+    restart: always
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: Password!23
+      POSTGRES_DB: ksbns
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d ksbns"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    restart: always
+    container_name: ksbns_pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@ksbns.com
+      PGADMIN_DEFAULT_PASSWORD: Password!23
+    ports:
+      - "8888:80"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+        - ./servers.json:/pgadmin4/servers.json
+
+
+  flyway:
+    image: flyway/flyway:latest
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: -url=jdbc:postgresql://postgres:5432/ksbns -user=admin -password=Password!23 migrate
+    volumes:
+      - ./migrate/sql:/flyway/sql
